@@ -6,8 +6,8 @@ Experiment configuration for MNIST dataset.
 dataset_config = {
     'name': 'mnist',
     'batch_size': 64,
-    'num_samples': None,  # Use full dataset
-    'critic_samples': 1200,  # Number of samples for critic
+    'num_samples': 200,  # Use full dataset - Default = None
+    'critic_samples': 50,  # Number of samples for critic - 1200
     'input_channels': 1,
     'num_classes': 10
 }
@@ -36,7 +36,8 @@ training_config = {
 
 # LSX configuration
 lsx_config = {
-    'iterations': 3,  # Number of LSX iterations (Explain, Reflect, Revise loops)
+    # Number of LSX iterations (Explain, Reflect, Revise loops)
+    'iterations': 3,
 }
 
 # Experiment configuration
