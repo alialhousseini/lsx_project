@@ -6,8 +6,8 @@ Experiment configuration for MNIST dataset.
 dataset_config = {
     'name': 'mnist',
     'batch_size': 64,
-    'num_samples': 200,  # Use full dataset - Default = None
-    'critic_samples': 50,  # Number of samples for critic - 1200
+    'num_samples': 500,  # Use full dataset - Default = None
+    'critic_samples': 100,  # Number of samples for critic - 1200
     'input_channels': 1,
     'num_classes': 10
 }

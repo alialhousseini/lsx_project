@@ -6,7 +6,6 @@ from torch.utils.data import Dataset, DataLoader, random_split, Subset
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets, transforms
-import medmnist
 from medmnist import ChestMNIST
 import os
 import numpy as np
