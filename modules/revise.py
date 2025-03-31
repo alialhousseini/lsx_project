@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
+from captum.attr import InputXGradient
 
 
 class Revise:
@@ -117,23 +118,26 @@ class Revise:
                 outputs = self.model.learner(inputs)
 
                 # Generate explanations for each sample
-                new_explanations = []
-                for i in range(inputs.size(0)):
-                    # Get the score for the target class
-                    score = outputs[i, targets_batch[i]]
+                # new_explanations = []
+                # for i in range(inputs.size(0)):
+                #     # Get the score for the target class
+                #     score = outputs[i, targets_batch[i]]
 
-                    # Compute gradients
-                    if i > 0:
-                        inputs.grad.zero_()
-                    score.backward(retain_graph=(i < inputs.size(0) - 1))
+                #     # Compute gradients
+                #     if i > 0:
+                #         inputs.grad.zero_()
+                #     score.backward(retain_graph=(i < inputs.size(0) - 1))
 
-                    # Compute input * gradient
-                    explanation = inputs[i].detach().clone(
-                    ) * inputs.grad[i].detach().clone()
-                    new_explanations.append(explanation.unsqueeze(0))
+                #     # Compute input * gradient
+                #     explanation = inputs[i].detach().clone(
+                #     ) * inputs.grad[i].detach().clone()
+                #     new_explanations.append(explanation.unsqueeze(0))
 
-                # Stack all explanations
-                new_explanations = torch.cat(new_explanations, dim=0)
+                # # Stack all explanations
+                # new_explanations = torch.cat(new_explanations, dim=0)
+
+                new_explanations = self.input_gradient(
+                    self.model.learner, inputs, targets_batch, self.device)
 
                 # Forward pass through critic
                 critic_outputs = self.model.critic(new_explanations)
@@ -170,6 +174,39 @@ class Revise:
                   f"Total Loss: {epoch_total_loss:.4f}, Accuracy: {epoch_acc:.2f}%")
 
         return history
+
+    # TEMPORARY
+    def input_gradient(self,
+                       model: nn.Module,
+                       inputs,
+                       labels,
+                       device: torch.device
+                       ):
+        """
+        Compute input × gradient explanation.
+
+        This method computes the gradient of the output with respect to the input,
+        and multiplies it elementwise with the input to generate the explanation.
+
+        Args:
+            model: Neural network model
+            inputs: Input tensor of shape (batch_size, 1, height, width)
+            labels: Target labels of shape (batch_size)
+            device: Device to use
+
+        Returns:
+            Explanation tensor of shape (batch_size, 1, height, width)
+        """
+        # Use captum's implementation of InputXGradient
+        inputs = inputs.to(device).requires_grad_(True)
+
+        # Create the attributor
+        input_x_gradient = InputXGradient(model)
+
+        # Compute attributions
+        attributions = input_x_gradient.attribute(inputs=inputs, target=labels)
+
+        return attributions
 
     def final_finetuning(self, train_loader, explanations, num_epochs=1):
         """
@@ -241,23 +278,25 @@ class Revise:
                 outputs = self.model.learner(inputs)
 
                 # Generate explanations for each sample
-                new_explanations = []
-                for i in range(inputs.size(0)):
-                    # Get the score for the target class
-                    score = outputs[i, targets_batch[i]]
+                # new_explanations = []
+                # for i in range(inputs.size(0)):
+                #     # Get the score for the target class
+                #     score = outputs[i, targets_batch[i]]
 
-                    # Compute gradients
-                    if i > 0:
-                        inputs.grad.zero_()
-                    score.backward(retain_graph=(i < inputs.size(0) - 1))
+                #     # Compute gradients
+                #     if i > 0:
+                #         inputs.grad.zero_()
+                #     score.backward(retain_graph=(i < inputs.size(0) - 1))
 
-                    # Compute input * gradient
-                    explanation = inputs[i].detach().clone(
-                    ) * inputs.grad[i].detach().clone()
-                    new_explanations.append(explanation.unsqueeze(0))
-
+                #     # Compute input * gradient
+                #     explanation = inputs[i].detach().clone(
+                #     ) * inputs.grad[i].detach().clone()
+                #     new_explanations.append(explanation.unsqueeze(0))
                 # Stack all explanations
-                new_explanations = torch.cat(new_explanations, dim=0)
+                # new_explanations = torch.cat(new_explanations, dim=0)
+
+                new_explanations = self.input_gradient(
+                    self.model.learner, inputs, targets_batch, self.device)
 
                 # Compute explanation consistency loss
                 expl_loss = mse_loss(new_explanations, ref_explanations_batch)

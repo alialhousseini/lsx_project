@@ -83,31 +83,14 @@ class Explain:
             torch.Tensor: Explanation tensor
         """
         # Ensure inputs require gradients
-        inputs.requires_grad = True
-
-        # Forward pass
-        outputs = self.model.learner(inputs)
+        # inputs.requires_grad = True
 
         # Get gradients with respect to inputs
-        explanations = []
-        for i in range(inputs.size(0)):
-            # Get the score for the target class
-            score = outputs[i, targets[i]]
+        explanations = self.input_gradient(
+            self.model.learner, inputs, targets, self.device)
 
-            # Compute gradients
-            self.model.learner.zero_grad()
-            score.backward(retain_graph=(i < inputs.size(0) - 1))
-
-            # Compute input * gradient
-            explanation = inputs[i].detach().clone() * \
-                inputs.grad[i].detach().clone()
-            explanations.append(explanation.unsqueeze(0))
-
-            # Reset gradients for next iteration
-            inputs.grad.zero_()
-
-        # Stack all explanations
-        explanations = torch.cat(explanations, dim=0)
+        # # Stack all explanations
+        # explanations = torch.cat(explanations, dim=0)
 
         return explanations
 
@@ -137,3 +120,35 @@ class Explain:
         explanation = self._generate_input_x_gradient(input_tensor, target)
 
         return explanation.squeeze(0)
+
+    def input_gradient(self,
+                       model: nn.Module,
+                       inputs,
+                       labels,
+                       device: torch.device
+                       ):
+        """
+        Compute input × gradient explanation.
+
+        This method computes the gradient of the output with respect to the input,
+        and multiplies it elementwise with the input to generate the explanation.
+
+        Args:
+            model: Neural network model
+            inputs: Input tensor of shape (batch_size, 1, height, width)
+            labels: Target labels of shape (batch_size)
+            device: Device to use
+
+        Returns:
+            Explanation tensor of shape (batch_size, 1, height, width)
+        """
+        # Use captum's implementation of InputXGradient
+        inputs = inputs.to(device).requires_grad_(True)
+
+        # Create the attributor
+        input_x_gradient = InputXGradient(model)
+
+        # Compute attributions
+        attributions = input_x_gradient.attribute(inputs=inputs, target=labels)
+
+        return attributions

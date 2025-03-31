@@ -123,6 +123,7 @@ class Reflect:
         correct = 0
         total = 0
         all_probs = []
+        all_losses = []
 
         with torch.no_grad():
             for batch_explanations, batch_targets in dataloader:
@@ -138,13 +139,13 @@ class Reflect:
                 all_probs.append(probs.cpu())
 
                 # Statistics
-                total_loss += loss.item() * batch_explanations.size(0)
+                all_losses.append(loss.item())
                 _, predicted = outputs.max(1)
-                total += batch_targets.size(0)
+                # total += batch_targets.size(0)
                 correct += predicted.eq(batch_targets).sum().item()
 
         # Calculate metrics
-        avg_loss = total_loss / total
+        avg_loss = sum(all_losses) / len(all_losses)
         accuracy = 100. * correct / total
         all_probs = torch.cat(all_probs, dim=0)
 
