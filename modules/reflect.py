@@ -71,9 +71,9 @@ class Reflect:
             total = 0
 
             for batch_explanations, batch_targets in tqdm(dataloader, desc=f"Training critic (Epoch {epoch+1}/{num_epochs})"):
-                batch_explanations = batch_explanations.to(self.device)
+                batch_explanations = batch_explanations.detach().to(self.device)
                 batch_targets = batch_targets.to(self.device)
-
+                
                 # Zero the parameter gradients
                 self.optimizer.zero_grad()
 
@@ -141,7 +141,7 @@ class Reflect:
                 # Statistics
                 all_losses.append(loss.item())
                 _, predicted = outputs.max(1)
-                # total += batch_targets.size(0)
+                total += batch_targets.size(0)
                 correct += predicted.eq(batch_targets).sum().item()
 
         # Calculate metrics

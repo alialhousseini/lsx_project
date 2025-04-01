@@ -5,9 +5,9 @@ Experiment configuration for MNIST dataset.
 # Dataset configuration
 dataset_config = {
     'name': 'mnist',
-    'batch_size': 64,
-    'num_samples': 500,  # Use full dataset - Default = None
-    'critic_samples': 100,  # Number of samples for critic - 1200
+    'batch_size': 128,
+    'num_samples': None,  # Use full dataset - Default = None
+    'critic_samples': 25000,  # Number of samples for critic - 1200
     'input_channels': 1,
     'num_classes': 10
 }
@@ -21,15 +21,15 @@ model_config = {
 # Training configuration
 training_config = {
     'num_epochs_fit': 10,
-    'num_epochs_reflect': 1,
+    'num_epochs_reflect': 5,
     'num_epochs_revise': 5,
-    'num_epochs_finetune': 3,
+    'num_epochs_finetune': 10,
     'lambda_expl': 100,  # Scaling factor for explanation loss
-    'learning_rate_fit': 0.001,
-    'learning_rate_reflect': 0.001,
-    'learning_rate_revise': 0.0005,
+    'learning_rate_fit': 0.01,
+    'learning_rate_reflect': 0.1,
+    'learning_rate_revise': 0.001,
     'early_stopping': True,
-    'patience': 3,
+    'patience': 4,
     'device': 'cuda',  # 'cuda' or 'cpu'
     'random_seed': 42
 }

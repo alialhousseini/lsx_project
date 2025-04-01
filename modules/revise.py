@@ -251,8 +251,7 @@ class Revise:
             expl_iter = iter(expl_loader)
 
             for inputs, targets_batch in tqdm(train_loader, desc="Final finetuning"):
-                inputs, targets_batch = inputs.to(
-                    self.device), targets_batch.to(self.device)
+                inputs, targets_batch = inputs.to(self.device), targets_batch.to(self.device)
 
                 # Get corresponding reference explanations batch
                 try:
@@ -263,52 +262,34 @@ class Revise:
 
                 ref_explanations_batch = ref_explanations_batch.to(self.device)
 
-                # Zero the parameter gradients
+                # === Reset gradients
                 self.optimizer.zero_grad()
 
-                # Forward pass for base task
+                # === Detach inputs for explanation step
+                expl_inputs = inputs.detach().clone().requires_grad_(True)
+
+                # === Isolate explanation in its own graph
+                with torch.enable_grad():
+                    new_explanations = self.input_gradient(
+                        self.model.learner, expl_inputs, targets_batch, self.device
+                    )
+
+                # === Explanation loss (do NOT detach it!)
+                with torch.no_grad():
+                    expl_loss = mse_loss(new_explanations, ref_explanations_batch)
+                # === Compute classification output AFTER explanation
                 outputs = self.model.learner(inputs)
                 base_loss = self.criterion(outputs, targets_batch)
 
-                # Generate new explanations
-                inputs.requires_grad = True
-                self.model.learner.zero_grad()
-
-                # Forward pass again to get gradients
-                outputs = self.model.learner(inputs)
-
-                # Generate explanations for each sample
-                # new_explanations = []
-                # for i in range(inputs.size(0)):
-                #     # Get the score for the target class
-                #     score = outputs[i, targets_batch[i]]
-
-                #     # Compute gradients
-                #     if i > 0:
-                #         inputs.grad.zero_()
-                #     score.backward(retain_graph=(i < inputs.size(0) - 1))
-
-                #     # Compute input * gradient
-                #     explanation = inputs[i].detach().clone(
-                #     ) * inputs.grad[i].detach().clone()
-                #     new_explanations.append(explanation.unsqueeze(0))
-                # Stack all explanations
-                # new_explanations = torch.cat(new_explanations, dim=0)
-
-                new_explanations = self.input_gradient(
-                    self.model.learner, inputs, targets_batch, self.device)
-
-                # Compute explanation consistency loss
-                expl_loss = mse_loss(new_explanations, ref_explanations_batch)
-
-                # Combine losses
+                # === Combine losses
                 total_loss = base_loss + self.lambda_expl * expl_loss
 
-                # Backward pass and optimize
+                # === Final backprop
+                torch.autograd.set_detect_anomaly(True)
                 total_loss.backward()
                 self.optimizer.step()
 
-                # Statistics
+                # === Stats
                 running_base_loss += base_loss.item() * inputs.size(0)
                 running_expl_loss += expl_loss.item() * inputs.size(0)
                 running_total_loss += total_loss.item() * inputs.size(0)
